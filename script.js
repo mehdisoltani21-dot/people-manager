@@ -1,4 +1,5 @@
-// لیست نفرات (کد + نام کامل)
+
+ // لیست نفرات (کد + نام کامل)
 const peopleList = [
   { id: "7020", name: "Arash Baba" },
   { id: "7021", name: "Daryoush Kazemkhanloo" },
@@ -21,29 +22,45 @@ const peopleList = [
   { id: "7240", name: "Dariush Hazrati" }
 ];
 
-// کلید ذخیره‌سازی
-const STORAGE_KEY = 'peopleErrorRecords';
+// فهرست ایستگاه‌های کاری
+const workstations = [
+  "ورودی",
+  "روکش زیرین",
+  "سنباده پنل",
+  "روکش فوقانی",
+  "اوستا باشی پنل",
+  "اوستاباشی پروفیل",
+  "گزارشگیر",
+  "بسته بندی پنل",
+  "برش فویل",
+  "روکش پروفیل",
+  "سنباده پروفیل",
+  "فرزه",
+  "سلکو",
+  "پالت سازی"
+];
 
-// عناصر DOM
-const form = document.getElementById('record-form');
-const formTitle = document.getElementById('form-title');
-const submitBtn = document.getElementById('submit-btn');
-const cancelBtn = document.getElementById('cancel-btn');
-const personSelect = document.getElementById('personSelect');
-const workstationInput = document.getElementById('workstation');
-const lastNameInput = document.getElementById('lastName');
-const errorTypeInput = document.getElementById('errorType');
-const recordsBody = document.getElementById('records-body');
-const emptyMessage = document.getElementById('empty-message');
-const searchInput = document.getElementById('search-input');
+const STORAGE_KEY = "peopleErrorRecords";
+
+// عناصر صفحه
+const form = document.getElementById("record-form");
+const formTitle = document.getElementById("form-title");
+const submitBtn = document.getElementById("submit-btn");
+const cancelBtn = document.getElementById("cancel-btn");
+const personSelect = document.getElementById("personSelect");
+const workstationSelect = document.getElementById("workstation");
+const errorTypeInput = document.getElementById("errorType");
+const recordsBody = document.getElementById("records-body");
+const emptyMessage = document.getElementById("empty-message");
+const searchInput = document.getElementById("search-input");
 
 let records = [];
 let editIndex = null;
 
-// پر کردن لیست انتخاب نفرات
+// پر کردن فهرست نفرات
 function populatePeopleSelect() {
   peopleList.forEach(person => {
-    const option = document.createElement('option');
+    const option = document.createElement("option");
     option.value = person.id;
     option.textContent = `${person.id} - ${person.name}`;
     option.dataset.name = person.name;
@@ -51,95 +68,157 @@ function populatePeopleSelect() {
   });
 }
 
-// وقتی نفر انتخاب شد، نام خانوادگی رو استخراج کن
-personSelect.addEventListener('change', () => {
-  const selected = personSelect.options[personSelect.selectedIndex];
-  if (selected.value) {
-    const fullName = selected.dataset.name;
-    // آخرین کلمه را به عنوان نام خانوادگی در نظر می‌گیریم
-    const parts = fullName.trim().split(' ');
-    lastNameInput.value = parts[parts.length - 1] || '';
-  } else {
-    lastNameInput.value = '';
-  }
-});
+// پر کردن فهرست ایستگاه‌های کاری
+function populateWorkstations() {
+  workstationSelect.innerHTML = "";
 
-// بارگذاری از localStorage
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "-- انتخاب ایستگاه کاری --";
+  workstationSelect.appendChild(placeholder);
+
+  workstations.forEach(workstation => {
+    const option = document.createElement("option");
+    option.value = workstation;
+    option.textContent = workstation;
+    workstationSelect.appendChild(option);
+  });
+}
+
+// بارگذاری اطلاعات قبلی
 function loadRecords() {
-  const data = localStorage.getItem(STORAGE_KEY);
-  records = data ? JSON.parse(data) : [];
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    const parsed = data ? JSON.parse(data) : [];
+    records = Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error("خطا در بارگذاری اطلاعات:", error);
+    records = [];
+    alert("خواندن اطلاعات ذخیره‌شده با خطا مواجه شد.");
+  }
+
+  // سازگاری با رکوردهای قبلی
+  records = records.map(record => ({
+    ...record,
+    id: record.id ?? Date.now() + Math.random(),
+    personId: String(record.personId ?? ""),
+    fullName: record.fullName ?? "",
+    workstation: record.workstation ?? "",
+    errorType: record.errorType ?? ""
+  }));
+
   renderTable();
 }
 
-// ذخیره در localStorage
+// ذخیره اطلاعات
 function saveRecords() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    return true;
+  } catch (error) {
+    console.error("خطا در ذخیره اطلاعات:", error);
+    alert("ذخیره اطلاعات انجام نشد. فضای ذخیره‌سازی مرورگر را بررسی کنید.");
+    return false;
+  }
 }
 
-// رندر جدول
-function renderTable(filter = '') {
-  const filtered = records.filter(r => {
-    const search = filter.toLowerCase();
-    return (
-      r.personId.includes(search) ||
-      r.fullName.toLowerCase().includes(search) ||
-      r.workstation.toLowerCase().includes(search) ||
-      r.lastName.toLowerCase().includes(search) ||
-      r.errorType.toLowerCase().includes(search)
-    );
-  });
+// نمایش جدول
+function renderTable(filter = "") {
+  const search = filter.trim().toLowerCase();
 
-  recordsBody.innerHTML = '';
+  const filtered = records
+    .map((record, index) => ({ record, index }))
+    .filter(({ record }) => {
+      return [
+        record.personId,
+        record.fullName,
+        record.workstation,
+        record.errorType
+      ].some(value =>
+        String(value ?? "").toLowerCase().includes(search)
+      );
+    });
+
+  recordsBody.innerHTML = "";
 
   if (filtered.length === 0) {
-    emptyMessage.classList.add('show');
-    emptyMessage.textContent = filter ? 'نتیجه‌ای یافت نشد.' : 'هنوز هیچ رکوردی ثبت نشده است.';
+    emptyMessage.classList.add("show");
+    emptyMessage.textContent = search
+      ? "نتیجه‌ای یافت نشد."
+      : "هنوز هیچ رکوردی ثبت نشده است.";
     return;
   }
 
-  emptyMessage.classList.remove('show');
+  emptyMessage.classList.remove("show");
 
-  filtered.forEach((record, index) => {
-    const realIndex = records.findIndex(r => r.id === record.id);
+  filtered.forEach(({ record, index }, rowIndex) => {
+    const tr = document.createElement("tr");
 
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${index + 1}</td>
-      <td>${escapeHtml(record.personId)}</td>
-      <td>${escapeHtml(record.fullName)}</td>
-      <td>${escapeHtml(record.workstation)}</td>
-      <td>${escapeHtml(record.lastName)}</td>
-      <td>${escapeHtml(record.errorType)}</td>
-      <td class="actions">
-        <button class="btn-edit" onclick="editRecord(${realIndex})">ویرایش</button>
-        <button class="btn-delete" onclick="deleteRecord(${realIndex})">حذف</button>
-      </td>
-    `;
+    const values = [
+      rowIndex + 1,
+      record.personId,
+      record.fullName,
+      record.workstation,
+      record.errorType
+    ];
+
+    values.forEach(value => {
+      const td = document.createElement("td");
+      td.textContent = String(value ?? "");
+      tr.appendChild(td);
+    });
+
+    const actions = document.createElement("td");
+    actions.className = "actions";
+
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "btn-edit";
+    editButton.textContent = "ویرایش";
+    editButton.addEventListener("click", () => editRecord(index));
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "btn-delete";
+    deleteButton.textContent = "حذف";
+    deleteButton.addEventListener("click", () => deleteRecord(index));
+
+    actions.append(editButton, deleteButton);
+    tr.appendChild(actions);
     recordsBody.appendChild(tr);
   });
 }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-// افزودن یا ویرایش
-form.addEventListener('submit', (e) => {
-  e.preventDefault();
+// افزودن یا ویرایش رکورد
+form.addEventListener("submit", event => {
+  event.preventDefault();
 
   const selectedOption = personSelect.options[personSelect.selectedIndex];
-  if (!selectedOption.value) return;
+
+  if (!selectedOption || !selectedOption.value) {
+    alert("لطفاً نام نفر را انتخاب کنید.");
+    return;
+  }
+
+  if (!workstationSelect.value) {
+    alert("لطفاً ایستگاه کاری را انتخاب کنید.");
+    return;
+  }
 
   const newRecord = {
     id: editIndex !== null ? records[editIndex].id : Date.now(),
     personId: selectedOption.value,
     fullName: selectedOption.dataset.name,
-    workstation: workstationInput.value.trim(),
-    lastName: lastNameInput.value.trim(),
+    workstation: workstationSelect.value,
     errorType: errorTypeInput.value.trim()
   };
+
+  if (!newRecord.errorType) {
+    alert("لطفاً نوع خطا را وارد کنید.");
+    return;
+  }
+
+  const previousRecord = editIndex !== null ? records[editIndex] : null;
 
   if (editIndex !== null) {
     records[editIndex] = newRecord;
@@ -147,52 +226,100 @@ form.addEventListener('submit', (e) => {
     records.unshift(newRecord);
   }
 
-  saveRecords();
+  if (!saveRecords()) {
+    if (editIndex !== null) {
+      records[editIndex] = previousRecord;
+    } else {
+      records.shift();
+    }
+    return;
+  }
+
   renderTable(searchInput.value);
   resetForm();
 });
 
-// ویرایش
+// ویرایش رکورد
 function editRecord(index) {
   const record = records[index];
+  if (!record) return;
+
   personSelect.value = record.personId;
-  workstationInput.value = record.workstation;
-  lastNameInput.value = record.lastName;
+
+  // پشتیبانی از ایستگاه‌های قدیمی که دیگر در فهرست نیستند
+  const knownWorkstation = workstations.includes(record.workstation);
+
+  if (!knownWorkstation && record.workstation) {
+    const option = document.createElement("option");
+    option.value = record.workstation;
+    option.textContent = record.workstation + " (رکورد قبلی)";
+    workstationSelect.appendChild(option);
+  }
+
+  workstationSelect.value = record.workstation;
   errorTypeInput.value = record.errorType;
 
   editIndex = index;
-  formTitle.textContent = 'ویرایش رکورد';
-  submitBtn.textContent = 'به‌روزرسانی';
-  cancelBtn.style.display = 'inline-block';
+  formTitle.textContent = "ویرایش رکورد";
+  submitBtn.textContent = "به‌روزرسانی";
+  cancelBtn.style.display = "inline-block";
 
-  document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
+  document.querySelector(".form-section").scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
 }
 
-// حذف
+// حذف رکورد
 function deleteRecord(index) {
-  if (confirm('آیا مطمئن هستید که می‌خواهید این رکورد را حذف کنید؟')) {
+  if (!records[index]) return;
+
+  if (confirm("آیا مطمئن هستید که می‌خواهید این رکورد را حذف کنید؟")) {
+    const deletedRecord = records[index];
     records.splice(index, 1);
-    saveRecords();
+
+    if (!saveRecords()) {
+      records.splice(index, 0, deletedRecord);
+      return;
+    }
+
     renderTable(searchInput.value);
-    if (editIndex === index) resetForm();
+
+    if (editIndex === index) {
+      resetForm();
+    } else if (editIndex !== null && editIndex > index) {
+      editIndex--;
+    }
   }
 }
 
-cancelBtn.addEventListener('click', resetForm);
+// انصراف از ویرایش
+cancelBtn.addEventListener("click", resetForm);
 
+// پاک کردن فرم
 function resetForm() {
   form.reset();
-  lastNameInput.value = '';
   editIndex = null;
-  formTitle.textContent = 'افزودن رکورد جدید';
-  submitBtn.textContent = 'ذخیره';
-  cancelBtn.style.display = 'none';
+  formTitle.textContent = "افزودن رکورد جدید";
+  submitBtn.textContent = "ذخیره";
+  cancelBtn.style.display = "none";
+
+  // حذف گزینه موقت مربوط به ایستگاه قدیمی
+  Array.from(workstationSelect.options).forEach(option => {
+    if (option.textContent.endsWith(" (رکورد قبلی)")) {
+      option.remove();
+    }
+  });
+
+  workstationSelect.value = "";
 }
 
-searchInput.addEventListener('input', () => {
+// جست‌وجو
+searchInput.addEventListener("input", () => {
   renderTable(searchInput.value);
 });
 
-// شروع
+// راه‌اندازی صفحه
 populatePeopleSelect();
+populateWorkstations();
 loadRecords();
