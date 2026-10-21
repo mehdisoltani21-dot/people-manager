@@ -11,7 +11,7 @@
   <div class="container">
     <header>
       <h1>📋 ثبت اطلاعات نفرات و خطاها</h1>
-      <p class="subtitle">افزودن، ویرایش و مدیریت اطلاعات</p>
+      <p class="subtitle">افزودن، ویرایش و مدیریت اطلاعات پرسنل</p>
     </header>
 
     <section class="form-section">
@@ -29,34 +29,35 @@
             <label for="workstation">ایستگاه کاری</label>
             <select id="workstation" required>
               <option value="">-- انتخاب ایستگاه کاری --</option>
-              <option value="ورودی">ورودی</option>
-              <option value="روکش زیرین">روکش زیرین</option>
-              <option value="سنباده پنل">سنباده پنل</option>
-              <option value="روکش فوقانی">روکش فوقانی</option>
-              <option value="اوستا باشی پنل">اوستا باشی پنل</option>
-              <option value="اوستاباشی پروفیل">اوستاباشی پروفیل</option>
-              <option value="گزارشگیر">گزارشگیر</option>
-              <option value="بسته بندی پنل">بسته بندی پنل</option>
-              <option value="برش فویل">برش فویل</option>
-              <option value="روکش پروفیل">روکش پروفیل</option>
-              <option value="سنباده پروفیل">سنباده پروفیل</option>
-              <option value="فرزه">فرزه</option>
-              <option value="سلکو">سلکو</option>
-              <option value="پالت سازی">پالت سازی</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="warningType">نوع اخطار</label>
+            <select id="warningType">
+              <option value="">-- انتخاب نوع اخطار --</option>
+              <option value="شفاهی">شفاهی</option>
+              <option value="کتبی">کتبی</option>
+              <option value="ارجاع به کمیته انضباطی">ارجاع به کمیته انضباطی</option>
             </select>
           </div>
 
           <div class="form-group">
             <label for="errorType">نوع خطا</label>
-            <input type="text" id="errorType"
-                   placeholder="مثال: خطای کیفیت / تأخیر / ..." required>
+            <select id="errorType" required>
+              <option value="">-- انتخاب نوع خطا --</option>
+            </select>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="description">توضیحات</label>
+            <textarea id="description" rows="3" placeholder="توضیحات اختیاری..."></textarea>
           </div>
         </div>
 
         <div class="form-actions">
           <button type="submit" class="btn btn-primary" id="submit-btn">ذخیره</button>
-          <button type="button" class="btn btn-secondary"
-                  id="cancel-btn" style="display:none;">انصراف</button>
+          <button type="button" class="btn btn-secondary" id="cancel-btn" style="display:none;">انصراف</button>
         </div>
       </form>
     </section>
@@ -65,8 +66,7 @@
       <div class="table-header">
         <h2>لیست رکوردها</h2>
         <div class="search-box">
-          <input type="text" id="search-input"
-                 placeholder="جستجو بر اساس نام، کد، ایستگاه یا نوع خطا...">
+          <input type="text" id="search-input" placeholder="جستجو بر اساس نام، کد، ایستگاه، نوع اخطار یا خطا...">
         </div>
       </div>
 
@@ -78,7 +78,9 @@
               <th>کد</th>
               <th>نام و نام خانوادگی</th>
               <th>ایستگاه کاری</th>
+              <th>نوع اخطار</th>
               <th>نوع خطا</th>
+              <th>توضیحات</th>
               <th>عملیات</th>
             </tr>
           </thead>
@@ -86,9 +88,7 @@
         </table>
       </div>
 
-      <p id="empty-message" class="empty-message">
-        هنوز هیچ رکوردی ثبت نشده است.
-      </p>
+      <p id="empty-message" class="empty-message">هنوز هیچ رکوردی ثبت نشده است.</p>
     </section>
   </div>
 

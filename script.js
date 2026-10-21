@@ -1,8 +1,8 @@
-// لیست نفرات (کد + نام کامل)
+// لیست نفرات (کد + نام کامل) - مطابق اکسل
 const peopleList = [
   { id: "7020", name: "Arash Baba" },
   { id: "7021", name: "Daryoush Kazemkhanloo" },
-  { id: "7022", name: "Mehdi Afshar Vangini" },
+  { id: "7022", name: "Mehdi Afashar Vangini" },
   { id: "7023", name: "Hossein Amandiha" },
   { id: "7065", name: "Alireza Zolghadr" },
   { id: "7071", name: "Rahim Ghalandari" },
@@ -21,7 +21,7 @@ const peopleList = [
   { id: "7240", name: "Dariush Hazrati" }
 ];
 
-// فهرست ایستگاه‌های کاری
+// ایستگاه‌های کاری
 const workstations = [
   "ورودی",
   "روکش زیرین",
@@ -39,16 +39,33 @@ const workstations = [
   "پالت سازی"
 ];
 
-const STORAGE_KEY = "peopleErrorRecords";
+// نوع خطا (مطابق اکسل)
+const errorTypes = [
+  "عدم اجرای صحیح وظایف محوله",
+  "غیبت و تأخیر",
+  "وضعیت ظاهری نامناسب",
+  "استفاده غیر استاندارد لوازم مصرفی",
+  "عدم استفاده از وسایل ایمنی فردی",
+  "عدم استفاده از وسایل حفاظت فردی",
+  "ماشین آلات و تجهیزات",
+  "مشکلات فرآیندی",
+  "عدم آموزش",
+  "شرایط محیطی",
+  "عدم رعایت مقررات ایمنی و دستورالعمل ها",
+  "ازدحام و بی نظمی"
+];
 
-// عناصر صفحه
+const STORAGE_KEY = "peopleErrorRecords_v2";
+
 const form = document.getElementById("record-form");
 const formTitle = document.getElementById("form-title");
 const submitBtn = document.getElementById("submit-btn");
 const cancelBtn = document.getElementById("cancel-btn");
 const personSelect = document.getElementById("personSelect");
 const workstationSelect = document.getElementById("workstation");
-const errorTypeInput = document.getElementById("errorType");
+const warningTypeSelect = document.getElementById("warningType");
+const errorTypeSelect = document.getElementById("errorType");
+const descriptionInput = document.getElementById("description");
 const recordsBody = document.getElementById("records-body");
 const emptyMessage = document.getElementById("empty-message");
 const searchInput = document.getElementById("search-input");
@@ -56,7 +73,6 @@ const searchInput = document.getElementById("search-input");
 let records = [];
 let editIndex = null;
 
-// پر کردن فهرست نفرات
 function populatePeopleSelect() {
   peopleList.forEach(person => {
     const option = document.createElement("option");
@@ -67,61 +83,53 @@ function populatePeopleSelect() {
   });
 }
 
-// پر کردن فهرست ایستگاه‌های کاری
-function populateWorkstations() {
-  workstationSelect.innerHTML = "";
-
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "-- انتخاب ایستگاه کاری --";
-  workstationSelect.appendChild(placeholder);
-
-  workstations.forEach(workstation => {
+function populateSelect(selectEl, items, placeholder) {
+  selectEl.innerHTML = "";
+  const ph = document.createElement("option");
+  ph.value = "";
+  ph.textContent = placeholder;
+  selectEl.appendChild(ph);
+  items.forEach(item => {
     const option = document.createElement("option");
-    option.value = workstation;
-    option.textContent = workstation;
-    workstationSelect.appendChild(option);
+    option.value = item;
+    option.textContent = item;
+    selectEl.appendChild(option);
   });
 }
 
-// بارگذاری اطلاعات قبلی
 function loadRecords() {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     const parsed = data ? JSON.parse(data) : [];
     records = Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error("خطا در بارگذاری اطلاعات:", error);
+  } catch (e) {
+    console.error(e);
     records = [];
-    alert("خواندن اطلاعات ذخیره‌شده با خطا مواجه شد.");
   }
 
-  // سازگاری با رکوردهای قبلی
-  records = records.map(record => ({
-    ...record,
-    id: record.id ?? Date.now() + Math.random(),
-    personId: String(record.personId ?? ""),
-    fullName: record.fullName ?? "",
-    workstation: record.workstation ?? "",
-    errorType: record.errorType ?? ""
+  records = records.map(r => ({
+    id: r.id ?? Date.now() + Math.random(),
+    personId: String(r.personId ?? ""),
+    fullName: r.fullName ?? "",
+    workstation: r.workstation ?? "",
+    warningType: r.warningType ?? "",
+    errorType: r.errorType ?? "",
+    description: r.description ?? ""
   }));
 
   renderTable();
 }
 
-// ذخیره اطلاعات
 function saveRecords() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
     return true;
-  } catch (error) {
-    console.error("خطا در ذخیره اطلاعات:", error);
-    alert("ذخیره اطلاعات انجام نشد. فضای ذخیره‌سازی مرورگر را بررسی کنید.");
+  } catch (e) {
+    alert("ذخیره اطلاعات انجام نشد.");
     return false;
   }
 }
 
-// نمایش جدول
 function renderTable(filter = "") {
   const search = filter.trim().toLowerCase();
 
@@ -132,19 +140,17 @@ function renderTable(filter = "") {
         record.personId,
         record.fullName,
         record.workstation,
-        record.errorType
-      ].some(value =>
-        String(value ?? "").toLowerCase().includes(search)
-      );
+        record.warningType,
+        record.errorType,
+        record.description
+      ].some(v => String(v ?? "").toLowerCase().includes(search));
     });
 
   recordsBody.innerHTML = "";
 
   if (filtered.length === 0) {
     emptyMessage.classList.add("show");
-    emptyMessage.textContent = search
-      ? "نتیجه‌ای یافت نشد."
-      : "هنوز هیچ رکوردی ثبت نشده است.";
+    emptyMessage.textContent = search ? "نتیجه‌ای یافت نشد." : "هنوز هیچ رکوردی ثبت نشده است.";
     return;
   }
 
@@ -153,71 +159,71 @@ function renderTable(filter = "") {
   filtered.forEach(({ record, index }, rowIndex) => {
     const tr = document.createElement("tr");
 
-    const values = [
+    const cells = [
       rowIndex + 1,
       record.personId,
       record.fullName,
       record.workstation,
-      record.errorType
+      record.warningType || "-",
+      record.errorType,
+      record.description || "-"
     ];
 
-    values.forEach(value => {
+    cells.forEach(val => {
       const td = document.createElement("td");
-      td.textContent = String(value ?? "");
+      td.textContent = String(val);
       tr.appendChild(td);
     });
 
     const actions = document.createElement("td");
     actions.className = "actions";
 
-    const editButton = document.createElement("button");
-    editButton.type = "button";
-    editButton.className = "btn-edit";
-    editButton.textContent = "ویرایش";
-    editButton.addEventListener("click", () => editRecord(index));
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.className = "btn-edit";
+    editBtn.textContent = "ویرایش";
+    editBtn.addEventListener("click", () => editRecord(index));
 
-    const deleteButton = document.createElement("button");
-    deleteButton.type = "button";
-    deleteButton.className = "btn-delete";
-    deleteButton.textContent = "حذف";
-    deleteButton.addEventListener("click", () => deleteRecord(index));
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "btn-delete";
+    delBtn.textContent = "حذف";
+    delBtn.addEventListener("click", () => deleteRecord(index));
 
-    actions.append(editButton, deleteButton);
+    actions.append(editBtn, delBtn);
     tr.appendChild(actions);
     recordsBody.appendChild(tr);
   });
 }
 
-// افزودن یا ویرایش رکورد
-form.addEventListener("submit", event => {
-  event.preventDefault();
+form.addEventListener("submit", e => {
+  e.preventDefault();
 
-  const selectedOption = personSelect.options[personSelect.selectedIndex];
-
-  if (!selectedOption || !selectedOption.value) {
+  const selected = personSelect.options[personSelect.selectedIndex];
+  if (!selected || !selected.value) {
     alert("لطفاً نام نفر را انتخاب کنید.");
     return;
   }
-
   if (!workstationSelect.value) {
     alert("لطفاً ایستگاه کاری را انتخاب کنید.");
+    return;
+  }
+  if (!errorTypeSelect.value) {
+    alert("لطفاً نوع خطا را انتخاب کنید.");
     return;
   }
 
   const newRecord = {
     id: editIndex !== null ? records[editIndex].id : Date.now(),
-    personId: selectedOption.value,
-    fullName: selectedOption.dataset.name,
+    personId: selected.value,
+    fullName: selected.dataset.name,
     workstation: workstationSelect.value,
-    errorType: errorTypeInput.value.trim()
+    warningType: warningTypeSelect.value,
+    errorType: errorTypeSelect.value,
+    description: descriptionInput.value.trim()
   };
 
-  if (!newRecord.errorType) {
-    alert("لطفاً نوع خطا را وارد کنید.");
-    return;
-  }
-
-  const previousRecord = editIndex !== null ? records[editIndex] : null;
+  const prev = editIndex !== null ? records[editIndex] : null;
 
   if (editIndex !== null) {
     records[editIndex] = newRecord;
@@ -226,11 +232,8 @@ form.addEventListener("submit", event => {
   }
 
   if (!saveRecords()) {
-    if (editIndex !== null) {
-      records[editIndex] = previousRecord;
-    } else {
-      records.shift();
-    }
+    if (editIndex !== null) records[editIndex] = prev;
+    else records.shift();
     return;
   }
 
@@ -238,64 +241,60 @@ form.addEventListener("submit", event => {
   resetForm();
 });
 
-// ویرایش رکورد
 function editRecord(index) {
-  const record = records[index];
-  if (!record) return;
+  const r = records[index];
+  if (!r) return;
 
-  personSelect.value = record.personId;
+  personSelect.value = r.personId;
 
-  // پشتیبانی از ایستگاه‌های قدیمی که دیگر در فهرست نیستند
-  const knownWorkstation = workstations.includes(record.workstation);
-
-  if (!knownWorkstation && record.workstation) {
-    const option = document.createElement("option");
-    option.value = record.workstation;
-    option.textContent = record.workstation + " (رکورد قبلی)";
-    workstationSelect.appendChild(option);
+  // پشتیبانی از مقادیر قدیمی که در لیست نیستند
+  if (r.workstation && !workstations.includes(r.workstation)) {
+    const opt = document.createElement("option");
+    opt.value = r.workstation;
+    opt.textContent = r.workstation + " (قبلی)";
+    workstationSelect.appendChild(opt);
   }
+  workstationSelect.value = r.workstation;
 
-  workstationSelect.value = record.workstation;
-  errorTypeInput.value = record.errorType;
+  warningTypeSelect.value = r.warningType || "";
+
+  if (r.errorType && !errorTypes.includes(r.errorType)) {
+    const opt = document.createElement("option");
+    opt.value = r.errorType;
+    opt.textContent = r.errorType + " (قبلی)";
+    errorTypeSelect.appendChild(opt);
+  }
+  errorTypeSelect.value = r.errorType;
+
+  descriptionInput.value = r.description || "";
 
   editIndex = index;
   formTitle.textContent = "ویرایش رکورد";
   submitBtn.textContent = "به‌روزرسانی";
   cancelBtn.style.display = "inline-block";
 
-  document.querySelector(".form-section").scrollIntoView({
-    behavior: "smooth",
-    block: "start"
-  });
+  document.querySelector(".form-section").scrollIntoView({ behavior: "smooth" });
 }
 
-// حذف رکورد
 function deleteRecord(index) {
   if (!records[index]) return;
+  if (!confirm("آیا مطمئن هستید که می‌خواهید این رکورد را حذف کنید؟")) return;
 
-  if (confirm("آیا مطمئن هستید که می‌خواهید این رکورد را حذف کنید؟")) {
-    const deletedRecord = records[index];
-    records.splice(index, 1);
+  const deleted = records[index];
+  records.splice(index, 1);
 
-    if (!saveRecords()) {
-      records.splice(index, 0, deletedRecord);
-      return;
-    }
-
-    renderTable(searchInput.value);
-
-    if (editIndex === index) {
-      resetForm();
-    } else if (editIndex !== null && editIndex > index) {
-      editIndex--;
-    }
+  if (!saveRecords()) {
+    records.splice(index, 0, deleted);
+    return;
   }
+
+  renderTable(searchInput.value);
+  if (editIndex === index) resetForm();
+  else if (editIndex !== null && editIndex > index) editIndex--;
 }
 
-// انصراف از ویرایش
 cancelBtn.addEventListener("click", resetForm);
 
-// پاک کردن فرم
 function resetForm() {
   form.reset();
   editIndex = null;
@@ -303,22 +302,19 @@ function resetForm() {
   submitBtn.textContent = "ذخیره";
   cancelBtn.style.display = "none";
 
-  // حذف گزینه موقت مربوط به ایستگاه قدیمی
-  Array.from(workstationSelect.options).forEach(option => {
-    if (option.textContent.endsWith(" (رکورد قبلی)")) {
-      option.remove();
-    }
+  // پاک کردن گزینه‌های موقت
+  Array.from(workstationSelect.options).forEach(o => {
+    if (o.textContent.endsWith(" (قبلی)")) o.remove();
   });
-
-  workstationSelect.value = "";
+  Array.from(errorTypeSelect.options).forEach(o => {
+    if (o.textContent.endsWith(" (قبلی)")) o.remove();
+  });
 }
 
-// جست‌وجو
-searchInput.addEventListener("input", () => {
-  renderTable(searchInput.value);
-});
+searchInput.addEventListener("input", () => renderTable(searchInput.value));
 
-// راه‌اندازی صفحه
+// راه‌اندازی
 populatePeopleSelect();
-populateWorkstations();
+populateSelect(workstationSelect, workstations, "-- انتخاب ایستگاه کاری --");
+populateSelect(errorTypeSelect, errorTypes, "-- انتخاب نوع خطا --");
 loadRecords();
