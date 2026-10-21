@@ -1,4 +1,4 @@
-// لیست نفرات (کد + نام کامل) - مطابق اکسل
+// لیست نفرات (کد + نام کامل)
 const peopleList = [
   { id: "7020", name: "Arash Baba" },
   { id: "7021", name: "Daryoush Kazemkhanloo" },
@@ -21,7 +21,6 @@ const peopleList = [
   { id: "7240", name: "Dariush Hazrati" }
 ];
 
-// ایستگاه‌های کاری
 const workstations = [
   "ورودی",
   "روکش زیرین",
@@ -39,7 +38,6 @@ const workstations = [
   "پالت سازی"
 ];
 
-// نوع خطا (مطابق اکسل)
 const errorTypes = [
   "عدم اجرای صحیح وظایف محوله",
   "غیبت و تأخیر",
@@ -55,7 +53,7 @@ const errorTypes = [
   "ازدحام و بی نظمی"
 ];
 
-const STORAGE_KEY = "peopleErrorRecords_v2";
+const STORAGE_KEY = "peopleErrorRecords_v3";
 
 const form = document.getElementById("record-form");
 const formTitle = document.getElementById("form-title");
@@ -65,6 +63,8 @@ const personSelect = document.getElementById("personSelect");
 const workstationSelect = document.getElementById("workstation");
 const warningTypeSelect = document.getElementById("warningType");
 const errorTypeSelect = document.getElementById("errorType");
+const reportDateInput = document.getElementById("reportDate");
+const occurrenceDateInput = document.getElementById("occurrenceDate");
 const descriptionInput = document.getElementById("description");
 const recordsBody = document.getElementById("records-body");
 const emptyMessage = document.getElementById("empty-message");
@@ -72,6 +72,30 @@ const searchInput = document.getElementById("search-input");
 
 let records = [];
 let editIndex = null;
+
+// تاریخ امروز به شمسی (fa-IR)
+function getTodayPersian() {
+  return new Date().toLocaleDateString("fa-IR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
+}
+
+// تبدیل تاریخ میلادی input به نمایش شمسی
+function formatDisplayDate(isoDate) {
+  if (!isoDate) return "-";
+  try {
+    const d = new Date(isoDate + "T00:00:00");
+    return d.toLocaleDateString("fa-IR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    });
+  } catch {
+    return isoDate;
+  }
+}
 
 function populatePeopleSelect() {
   peopleList.forEach(person => {
@@ -97,6 +121,12 @@ function populateSelect(selectEl, items, placeholder) {
   });
 }
 
+function setDefaultDates() {
+  reportDateInput.value = getTodayPersian();
+  // تاریخ وقوع پیش‌فرض خالی می‌مونه تا کاربر خودش بزنه
+  occurrenceDateInput.value = "";
+}
+
 function loadRecords() {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
@@ -114,6 +144,8 @@ function loadRecords() {
     workstation: r.workstation ?? "",
     warningType: r.warningType ?? "",
     errorType: r.errorType ?? "",
+    reportDate: r.reportDate ?? "",
+    occurrenceDate: r.occurrenceDate ?? "",
     description: r.description ?? ""
   }));
 
@@ -142,6 +174,8 @@ function renderTable(filter = "") {
         record.workstation,
         record.warningType,
         record.errorType,
+        record.reportDate,
+        record.occurrenceDate,
         record.description
       ].some(v => String(v ?? "").toLowerCase().includes(search));
     });
@@ -166,6 +200,8 @@ function renderTable(filter = "") {
       record.workstation,
       record.warningType || "-",
       record.errorType,
+      record.reportDate || "-",
+      formatDisplayDate(record.occurrenceDate),
       record.description || "-"
     ];
 
@@ -220,6 +256,8 @@ form.addEventListener("submit", e => {
     workstation: workstationSelect.value,
     warningType: warningTypeSelect.value,
     errorType: errorTypeSelect.value,
+    reportDate: reportDateInput.value || getTodayPersian(),
+    occurrenceDate: occurrenceDateInput.value,
     description: descriptionInput.value.trim()
   };
 
@@ -247,7 +285,6 @@ function editRecord(index) {
 
   personSelect.value = r.personId;
 
-  // پشتیبانی از مقادیر قدیمی که در لیست نیستند
   if (r.workstation && !workstations.includes(r.workstation)) {
     const opt = document.createElement("option");
     opt.value = r.workstation;
@@ -266,6 +303,8 @@ function editRecord(index) {
   }
   errorTypeSelect.value = r.errorType;
 
+  reportDateInput.value = r.reportDate || getTodayPersian();
+  occurrenceDateInput.value = r.occurrenceDate || "";
   descriptionInput.value = r.description || "";
 
   editIndex = index;
@@ -301,8 +340,8 @@ function resetForm() {
   formTitle.textContent = "افزودن رکورد جدید";
   submitBtn.textContent = "ذخیره";
   cancelBtn.style.display = "none";
+  setDefaultDates();
 
-  // پاک کردن گزینه‌های موقت
   Array.from(workstationSelect.options).forEach(o => {
     if (o.textContent.endsWith(" (قبلی)")) o.remove();
   });
@@ -317,4 +356,5 @@ searchInput.addEventListener("input", () => renderTable(searchInput.value));
 populatePeopleSelect();
 populateSelect(workstationSelect, workstations, "-- انتخاب ایستگاه کاری --");
 populateSelect(errorTypeSelect, errorTypes, "-- انتخاب نوع خطا --");
+setDefaultDates();
 loadRecords();
